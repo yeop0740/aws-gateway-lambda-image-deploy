@@ -23,3 +23,15 @@ docker run --platform linux/arm64 -p 9000:8080 docker-deploy:test
 ```shell
 curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
 ```
+
+## docker 로그인, 빌드 후 private repository 에 push
+
+```
+aws ecr get-login-password --region <region> --profile <profile_name> | docker login --username AWS --password-stdin <private_repository_id>
+
+docker buildx build --platform linux/arm64 -t <repository_name> .
+
+docker tag <repository_name>:latest <ecr_url>/<repository_name>:latest
+
+docker push <ecr_url>/<repository_name>:latest
+```
