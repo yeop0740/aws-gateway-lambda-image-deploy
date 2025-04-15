@@ -1,53 +1,55 @@
 import * as cdk from "aws-cdk-lib";
-import { Construct } from "constructs";
+import {aws_ecr} from "aws-cdk-lib";
+import {Construct} from "constructs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { HttpApi, HttpMethod } from "aws-cdk-lib/aws-apigatewayv2";
-import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import {HttpApi, HttpMethod} from "aws-cdk-lib/aws-apigatewayv2";
+import {HttpLambdaIntegration} from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
-import { Platform } from "aws-cdk-lib/aws-ecr-assets";
+import {Platform} from "aws-cdk-lib/aws-ecr-assets";
+import {TagMutability} from "aws-cdk-lib/aws-ecr";
 
 export class PaymentAuthStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+        super(scope, id, props);
 
-    const paymentAuthImage = new ecr_assets.DockerImageAsset(
-      this,
-      "payment-auth-lambda-image",
-      {
-        assetName: "payment-auth-lambda-image",
-        directory: "./",
-        platform: Platform.LINUX_ARM64,
-      }
-    );
+        const paymentAuthRepository = new aws_ecr.Repository(this, 'payment-auth-lambda-repository', {
+            repositoryName: 'payment-auth-lambda-repository',
+            imageTagMutability: TagMutability.MUTABLE,
+            imageScanOnPush: true,
+        });
 
-    const paymentAuthFunction = new lambda.Function(
-      this,
-      "payment-auth-lambda",
-      {
-        functionName: "payment-auth-lambda",
-        runtime: lambda.Runtime.FROM_IMAGE,
-        code: lambda.Code.fromEcrImage(paymentAuthImage.repository, {
-          tagOrDigest: paymentAuthImage.imageTag,
-        }),
-        handler: lambda.Handler.FROM_IMAGE,
-      }
-    );
+        const paymentAuthFunction = new lambda.Function(
+            this,
+            "payment-auth-lambda",
+            {
+                functionName: "payment-auth-lambda",
+                runtime: lambda.Runtime.FROM_IMAGE,
+                architecture: lambda.Architecture.ARM_64,
+                memorySize: 1770,
+                timeout: cdk.Duration.seconds(20),
+                code: lambda.Code.fromEcrImage(paymentAuthRepository),
+                handler: lambda.Handler.FROM_IMAGE,
+            }
+        );
 
-    // Define the API Gateway resource
-    const paymentAuthApi = new HttpApi(this, "payment-auth-http-api-gateway", {
-      apiName: "payment-auth-api-gateway",
-      description: "payment auth 테스트용 http api gateway 입니다.",
-    });
+        paymentAuthRepository.grantRead(paymentAuthFunction);
+        paymentAuthRepository.grantPull(paymentAuthFunction);
 
-    const paymentAuthLambdaIntegration = new HttpLambdaIntegration(
-      "payment-auth-lambda-integration",
-      paymentAuthFunction
-    );
+        // Define the API Gateway resource
+        const paymentAuthApi = new HttpApi(this, "payment-auth-http-api-gateway", {
+            apiName: "payment-auth-api-gateway",
+            description: "payment auth 테스트용 http api gateway 입니다.",
+        });
 
-    paymentAuthApi.addRoutes({
-      path: "/auth",
-      methods: [HttpMethod.GET],
-      integration: paymentAuthLambdaIntegration,
-    });
-  }
+        const paymentAuthLambdaIntegration = new HttpLambdaIntegration(
+            "payment-auth-lambda-integration",
+            paymentAuthFunction
+        );
+
+        paymentAuthApi.addRoutes({
+            path: "/auth",
+            methods: [HttpMethod.GET],
+            integration: paymentAuthLambdaIntegration,
+        });
+    }
 }
