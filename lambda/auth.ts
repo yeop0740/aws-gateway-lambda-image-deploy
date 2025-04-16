@@ -17,7 +17,7 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
   console.log(JSON.stringify(event));
 
   const code = event.queryStringParameters?.code;
-  const customerKey = event.queryStringParameters?.customKey;
+  const customerKey = event.queryStringParameters?.customerKey;
 
   if (isNil(code) || isNil(customerKey)) {
     return {
