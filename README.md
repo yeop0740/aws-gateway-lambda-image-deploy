@@ -27,7 +27,7 @@ curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
 ## docker 로그인, 빌드 후 private repository 에 push
 
 ```
-aws ecr get-login-password --region <region> --profile <profile_name> | docker login --username AWS --password-stdin <private_repository_id>
+aws ecr get-login-password --region <region> --profile <profile_name> | docker login --username AWS --password-stdin <ecr_url>
 
 docker buildx build --platform linux/arm64 -t <repository_name> .
 
